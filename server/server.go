@@ -2,12 +2,13 @@ package main
 
 import (
 	"log"
-	gRPC "ChittyChat2.0/chat"
-	"google.golang.org/grpc"
-	"github.com/google/uuid"
+	"net"
 	"os"
 	"sync"
-	"net"
+
+	gRPC "ChittyChat2.0/chat"
+	"github.com/google/uuid"
+	"google.golang.org/grpc"
 )
 
 type server struct {
@@ -78,7 +79,7 @@ func (s *server) Chat(srv gRPC.Chat_ChatServer) error {
 			log.Printf("Receiving error: %v", err)
 			break
 		}
-		log.Printf("broadcast: %s", response.Message)
+		log.Printf("broadcast: Message from %s : %s", response.Name, response.Message)
 		for _, server := range s.getClients() {
 			//Using server to send broadcasting messages to all clients
 			if err := server.Send(&gRPC.BroadcastResponse{Message: response.Message}); err != nil {

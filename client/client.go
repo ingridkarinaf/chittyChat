@@ -1,15 +1,16 @@
 package main
 
 import (
+	"bufio"
+	"context"
+	"fmt"
+	"log"
+	"math/rand"
+	"os"
+	"time"
+
 	gRPC "ChittyChat2.0/chat"
 	"google.golang.org/grpc"
-	"context" 
-	"time"
-	"log"
-	"os"
-	"math/rand"
-	"fmt"
-	"bufio"
 )
 
 func main() {
@@ -54,7 +55,7 @@ func main() {
 				// exit if user entered an empty string
 				break
 			}
-			message := clientName + ": " + text
+			message := text
 			
 			/*
 			- How is it calling SendMsg directly on a stream, when it is wrapped inside of a function?
@@ -62,7 +63,7 @@ func main() {
 			which is then passed into the SendMessage?
 			*/
 			//Sending message using the broadcast request "message" //technical word for message?
-			if err := stream.SendMsg(&gRPC.BroadcastRequest{Message: message}); err != nil {
+			if err := stream.SendMsg(&gRPC.BroadcastRequest{Name: clientName, Message: message, Time: 1}); err != nil {
 				log.Fatal(err)
 			}
 			log.Printf("Message sent")
