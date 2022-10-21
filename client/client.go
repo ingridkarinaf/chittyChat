@@ -46,7 +46,7 @@ func main() {
 			// Holds the string that was scanned
 			text := scanner.Text()
 			if len(text) != 0 && len(text) < 128 {
-
+				log.Println("if statement true")
 				fmt.Println(text)
 			} else {
 				// exit if user entered an empty string
@@ -71,17 +71,19 @@ func main() {
 		}
 
 		// handle error
-		if scanner.Err() != nil {
-			log.Printf("Error: ", scanner.Err())
-		}
+		// if scanner.Err() != nil {
+		// 	log.Printf("Error: %s", scanner.Err())
+		// }
+
 	}()
 	//Infinite loop for receiving messages
 	for {
-		_, err := stream.Recv()
+		response, err := stream.Recv()
+
 		if err != nil {
 			log.Fatal(err)
 		}
-		log.Printf("Message received by other users")
+		log.Printf("Message from %s : %s", response.Name, response.Message)
 		//log.Printf("Received message from %s", response.Message)
 	}
 
