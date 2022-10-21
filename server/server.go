@@ -56,6 +56,7 @@ func (s *server) getClients() []gRPC.Chat_ChatServer {
 */
 func (s *server) Chat(srv gRPC.Chat_ChatServer) error {
 	userId := uuid.Must(uuid.NewRandom()).String() //Generating a random ID for a user
+
 	log.Printf("New User: %s", userId)
 
 	s.addClient(userId, srv)     //Adding user to the server
@@ -71,6 +72,18 @@ func (s *server) Chat(srv gRPC.Chat_ChatServer) error {
 			os.Exit(1)
 		}
 	}() //"defer function must be in a function call - what is this syntax?
+
+	//We get a joining request always when a new person join the chat
+	//which we send to all the chat members
+	joiningRequest, err := srv.Recv()
+	if err != nil {
+		log.Printf("Receiving error: %v", err)
+	}
+	for _, server := range s.getClients() {
+		if err := server.Send(&gRPC.BroadcastResponse{Name: joiningRequest.Name, Message: joiningRequest.Message}); err != nil {
+			log.Printf("Broadcasting error: %v", err)
+		}
+	}
 
 	/*
 		This function is continiously checking for messages
