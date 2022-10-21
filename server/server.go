@@ -15,6 +15,7 @@ type server struct {
 	gRPC.UnimplementedChatServer
 	clients map[string]gRPC.Chat_ChatServer
 	mu      sync.RWMutex //what is the mutex for?
+	clock   int32
 }
 
 /*
@@ -50,14 +51,27 @@ func (s *server) getClients() []gRPC.Chat_ChatServer {
 	return clientServers
 }
 
+func (s *server) updateLamport(clientClock int32) int32 {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	maxClock := int32(0)
+	if clientClock > s.clock {
+		maxClock = int32(clientClock)
+	} else {
+		maxClock = int32(s.clock)
+	}
+
+	return maxClock + 1
+}
+
 /*
 - Where was this defined? Can't find it in the proto file
 - Also where is it called?
 */
 func (s *server) Chat(srv gRPC.Chat_ChatServer) error {
-	userId := uuid.Must(uuid.NewRandom()).String() //Generating a random ID for a user
 
-	log.Printf("New User: %s", userId)
+	userId := uuid.Must(uuid.NewRandom()).String() //Generating a random ID for a user
 
 	s.addClient(userId, srv)     //Adding user to the server
 	defer s.removeClient(userId) //removing client at the end of the function
@@ -79,8 +93,12 @@ func (s *server) Chat(srv gRPC.Chat_ChatServer) error {
 	if err != nil {
 		log.Printf("Receiving error: %v", err)
 	}
+
+	s.clock = s.updateLamport(joiningRequest.Time)
+	log.Printf("%s at Lamport time %v: %s", joiningRequest.Name, s.clock, userId)
+
 	for _, server := range s.getClients() {
-		if err := server.Send(&gRPC.BroadcastResponse{Name: joiningRequest.Name, Message: joiningRequest.Message}); err != nil {
+		if err := server.Send(&gRPC.BroadcastResponse{Name: joiningRequest.Name, Message: joiningRequest.Message, Time: s.clock}); err != nil {
 			log.Printf("Broadcasting error: %v", err)
 		}
 	}
@@ -95,8 +113,11 @@ func (s *server) Chat(srv gRPC.Chat_ChatServer) error {
 			log.Printf("Receiving error: %v", err)
 			break
 		}
+		s.clock = s.updateLamport(joiningRequest.Time)
 
-		log.Printf("broadcast: Message from %s : %s", response.Name, response.Message)
+		log.Printf("broadcast at Lamport time %v: Message from %s : %s", s.clock, response.Name, response.Message)
+		s.clock = s.updateLamport(response.Time)
+
 		for _, server := range s.getClients() {
 
 			//Makes sure the message is not sent to the stream where the message came from
@@ -104,7 +125,7 @@ func (s *server) Chat(srv gRPC.Chat_ChatServer) error {
 				continue
 			}
 			//Using server to send broadcasting messages to all clients
-			if err := server.Send(&gRPC.BroadcastResponse{Name: response.Name, Message: response.Message}); err != nil {
+			if err := server.Send(&gRPC.BroadcastResponse{Name: response.Name, Message: response.Message, Time: s.clock}); err != nil {
 				log.Printf("Broadcasting error: %v", err)
 			}
 
