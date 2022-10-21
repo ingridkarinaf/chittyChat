@@ -37,6 +37,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	joiningMessage := "joined ChittyChat"
+	stream.SendMsg(&gRPC.BroadcastRequest{Name: clientName, Message: joiningMessage, Time: 1})
 
 	//Creating a thread with an infinite loop to keep sending messages/requests
 	go func() {
@@ -83,8 +85,13 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		log.Printf("Message from %s : %s", response.Name, response.Message)
-		//log.Printf("Received message from %s", response.Message)
+		if response.Message == joiningMessage {
+			log.Printf("%s %s", response.Name, response.Message)
+		} else {
+			log.Printf("Message from %s : %s", response.Name, response.Message)
+			//log.Printf("Received message from %s", response.Message)
+		}
+
 	}
 
 }
