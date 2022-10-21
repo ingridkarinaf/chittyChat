@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+option go_package = "chat/chat";
+
+package main;
+
+// The time service definition.
+service Chat {
+  //Does that mean it takes a stream? Passed in a context in the code
+  rpc Chat (stream BroadcastRequest) returns (stream BroadcastResponse); //this opens a stream between server and all the clients
+  
+}
+
+message BroadcastRequest{
+    string name = 1;
+    string message = 2;
+    int32 time = 3;
+}
+
+message BroadcastResponse {
+    string name = 1;
+    string message = 2;
+    int32 time = 3;
+}
+
+
