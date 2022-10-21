@@ -13,7 +13,11 @@ import (
 	"google.golang.org/grpc"
 )
 
+var clock int32
+
 func main() {
+
+	clock = 0
 	port := "localhost:5001"                                //connecting to same port as server
 	connection, err := grpc.Dial(port, grpc.WithInsecure()) //with insecure: disables transport security
 	if err != nil {
@@ -38,7 +42,7 @@ func main() {
 		log.Fatal(err)
 	}
 	joiningMessage := "joined ChittyChat"
-	stream.SendMsg(&gRPC.BroadcastRequest{Name: clientName, Message: joiningMessage, Time: 1})
+	stream.SendMsg(&gRPC.BroadcastRequest{Name: clientName, Message: joiningMessage, Time: int32(clock)})
 
 	//Creating a thread with an infinite loop to keep sending messages/requests
 	go func() {
@@ -63,7 +67,7 @@ func main() {
 				which is then passed into the SendMessage?
 			*/
 			//Sending message using the broadcast request "message" //technical word for message?
-			if err := stream.SendMsg(&gRPC.BroadcastRequest{Name: clientName, Message: message, Time: 1}); err != nil {
+			if err := stream.SendMsg(&gRPC.BroadcastRequest{Name: clientName, Message: message, Time: int32(clock)}); err != nil {
 				log.Fatal(err)
 			}
 			log.Printf("Message sent")
@@ -81,17 +85,28 @@ func main() {
 	//Infinite loop for receiving messages
 	for {
 		response, err := stream.Recv()
-
+		currentTime := updateLamport(response.Time)
 		if err != nil {
 			log.Fatal(err)
 		}
 		if response.Message == joiningMessage {
-			log.Printf("%s %s", response.Name, response.Message)
+			log.Printf("%s %s at Lamport time %v", response.Name, response.Message, currentTime)
 		} else {
-			log.Printf("Message from %s : %s", response.Name, response.Message)
+			log.Printf("Message from %s at Lamport time %v: %s", response.Name, currentTime, response.Message)
 			//log.Printf("Received message from %s", response.Message)
 		}
 
 	}
 
+}
+func updateLamport(responseClock int32) int32 {
+
+	maxClock := int32(0)
+	if responseClock > clock {
+		maxClock = int32(responseClock)
+	} else {
+		maxClock = int32(clock)
+	}
+
+	return maxClock + 1
 }
