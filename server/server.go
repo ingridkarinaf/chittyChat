@@ -14,7 +14,7 @@ import (
 type server struct {
 	gRPC.UnimplementedChatServer
 	clients map[string]gRPC.Chat_ChatServer
-	mu sync.RWMutex //what is the mutex for?
+	mu      sync.RWMutex //what is the mutex for?
 }
 
 /*
@@ -22,12 +22,13 @@ type server struct {
 - So here we have a server srv of type Chat_ChatServer
 */
 func (s *server) addClient(userId string, srv gRPC.Chat_ChatServer) {
-	s.mu.Lock() 
-	defer s.mu.Unlock() //Unlocks at the end of the function
+	s.mu.Lock()
+	defer s.mu.Unlock()     //Unlocks at the end of the function
 	s.clients[userId] = srv //Adds the server of the chat client to the list of clients
 }
 
 func (s *server) removeClient(userId string) {
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	delete(s.clients, userId)
@@ -56,14 +57,14 @@ func (s *server) Chat(srv gRPC.Chat_ChatServer) error {
 	userId := uuid.Must(uuid.NewRandom()).String() //Generating a random ID for a user
 	log.Printf("New User: %s", userId)
 
-	s.addClient(userId, srv) //Adding user to the server
+	s.addClient(userId, srv)     //Adding user to the server
 	defer s.removeClient(userId) //removing client at the end of the function
 
 	/*
-	- Executing at the end of the function
-	- ?? Does it exit if there's an error, or what is this for?
+		- Executing at the end of the function
+		- ?? Does it exit if there's an error, or what is this for?
 	*/
-	defer func () {
+	defer func() {
 		if err := recover(); err != nil {
 			log.Printf("panic: %v", err)
 			os.Exit(1)
@@ -71,7 +72,7 @@ func (s *server) Chat(srv gRPC.Chat_ChatServer) error {
 	}() //"defer function must be in a function call - what is this syntax?
 
 	/*
-	This function is continiously checking for messages
+		This function is continiously checking for messages
 	*/
 	for {
 		response, err := srv.Recv()
@@ -90,37 +91,32 @@ func (s *server) Chat(srv gRPC.Chat_ChatServer) error {
 	return nil
 }
 
-
-
-
 func main() {
 	//Establishing a connection
 	/*
-	- How come it is listening to the port before creating a server?
-	- Isn't it the server that is listening to the port?
-	- Although in the client, the main function established the connection,
-	and then creates multiple clients
+		- How come it is listening to the port before creating a server?
+		- Isn't it the server that is listening to the port?
+		- Although in the client, the main function established the connection,
+		and then creates multiple clients
 	*/
-	port := ":5001" 
-	lis, err := net.Listen("tcp", port) 
+	port := ":5001"
+	lis, err := net.Listen("tcp", port)
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
 
 	/*
-	- Here they register with the clients inside, whereas in another example (suvi's) they don't.
-	- 
+		- Here they register with the clients inside, whereas in another example (suvi's) they don't.
+		-
 	*/
-	s := grpc.NewServer() //rename s when understanding where the &server is coming from
+	s := grpc.NewServer()               //rename s when understanding where the &server is coming from
 	gRPC.RegisterChatServer(s, &server{ //where is the "server" coming from?
-		clients: make(map[string]gRPC.Chat_ChatServer), //making a map of clients 
-		mu: sync.RWMutex{},
+		clients: make(map[string]gRPC.Chat_ChatServer), //making a map of clients
+		mu:      sync.RWMutex{},
 	})
 
 	if err := s.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %v", err) 
+		log.Fatalf("failed to serve: %v", err)
 	}
 
-
-	
 }
