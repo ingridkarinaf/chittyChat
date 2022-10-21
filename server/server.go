@@ -32,6 +32,7 @@ func (s *server) removeClient(userId string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	delete(s.clients, userId)
+	log.Printf("Client left the chat")
 }
 
 func (s *server) getClients() []gRPC.Chat_ChatServer {
@@ -76,16 +77,24 @@ func (s *server) Chat(srv gRPC.Chat_ChatServer) error {
 	*/
 	for {
 		response, err := srv.Recv()
+
 		if err != nil {
 			log.Printf("Receiving error: %v", err)
 			break
 		}
+
 		log.Printf("broadcast: Message from %s : %s", response.Name, response.Message)
 		for _, server := range s.getClients() {
+
+			//Makes sure the message is not sent to the stream where the message came from
+			if server == srv {
+				continue
+			}
 			//Using server to send broadcasting messages to all clients
-			if err := server.Send(&gRPC.BroadcastResponse{Message: response.Message}); err != nil {
+			if err := server.Send(&gRPC.BroadcastResponse{Name: response.Name, Message: response.Message}); err != nil {
 				log.Printf("Broadcasting error: %v", err)
 			}
+
 		}
 	}
 	return nil
