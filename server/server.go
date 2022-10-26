@@ -116,14 +116,15 @@ func (s *server) Chat(srv gRPC.Chat_ChatServer) error {
 	for {
 
 		response, err := srv.Recv()
-		//Update time: receive message
-		s.clock = s.updateLamport(response.Time)
-		log.Printf("Receive message at Lamport time %v: Message from %s : %s", s.clock, response.Name, response.Message)
-
 		if err != nil {
 			log.Printf("Receiving error: %v", err)
 			break
 		}
+		//Update time: receive message
+		s.clock = s.updateLamport(response.Time)
+		log.Printf("Receive message at Lamport time %v: Message from %s : %s", s.clock, response.Name, response.Message)
+
+		
 
 		//Update time: broadcast message
 		s.clock = s.updateLamport(s.clock)
