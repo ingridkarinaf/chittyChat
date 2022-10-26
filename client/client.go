@@ -18,7 +18,7 @@ var clock int32
 func main() {
 
 	clock = 0
-	port := "localhost:5001"                                //connecting to same port as server
+	port := "localhost:9080"                                //connecting to same port as server
 	connection, err := grpc.Dial(port, grpc.WithInsecure()) //with insecure: disables transport security
 	if err != nil {
 		log.Fatalf("Unable to connect: %v", err)
@@ -39,6 +39,7 @@ func main() {
 	//Calling *THE SERVICE* from PB file, which returns a stream
 	stream, err := client.Chat(cont)
 	if err != nil {
+		log.Println("erroroorororo")
 		log.Fatal(err)
 	}
 	joiningMessage := "joined ChittyChat"
