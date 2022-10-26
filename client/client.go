@@ -69,13 +69,14 @@ func main() {
 				- Does &gRPC.BroadcastRequest{Message: mes} return the x.ClientStream.SendMsg(m)
 				which is then passed into the SendMessage?
 			*/
+			//Update time: send message
+			clock = updateLamport(clock)
+			log.Println("Message sent at Lamport time: ", clock)
 			//Sending message using the broadcast request "message" //technical word for message?
 			if err := stream.SendMsg(&gRPC.BroadcastRequest{Name: clientName, Message: message, Time: int32(clock)}); err != nil {
 				log.Fatal(err)
 			}
-			//Update time: send message
-			clock = updateLamport(clock)
-			log.Printf("Message sent")
+
 			//log.Printf("Sent message: %s", message)
 			waitTime := rand.Intn(5)
 			time.Sleep(time.Duration(waitTime) * time.Second)

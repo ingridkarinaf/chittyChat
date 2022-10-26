@@ -55,7 +55,7 @@ func (s *server) updateLamport(clientClock int32) int32 {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	maxClock := int32(0)
+	var maxClock int32
 	if clientClock > s.clock {
 		maxClock = int32(clientClock)
 	} else {
@@ -101,7 +101,7 @@ func (s *server) Chat(srv gRPC.Chat_ChatServer) error {
 		}
 	}() //"defer function must be in a function call - what is this syntax?
 
-	//Update time: Broadcast adding client
+	//Update time: Broadcast adding client message
 	s.clock = s.updateLamport(s.clock)
 	log.Println("Broadcasting adding client clock: ", s.clock)
 	for _, server := range s.getClients() {
@@ -118,15 +118,16 @@ func (s *server) Chat(srv gRPC.Chat_ChatServer) error {
 		response, err := srv.Recv()
 		//Update time: receive message
 		s.clock = s.updateLamport(response.Time)
+		log.Printf("Receive message at Lamport time %v: Message from %s : %s", s.clock, response.Name, response.Message)
+
 		if err != nil {
 			log.Printf("Receiving error: %v", err)
 			break
 		}
 
-		log.Printf("broadcast at Lamport time %v: Message from %s : %s", s.clock, response.Name, response.Message)
 		//Update time: broadcast message
 		s.clock = s.updateLamport(s.clock)
-
+		log.Println("Time when broadcasting message: ", s.clock)
 		for _, server := range s.getClients() {
 
 			//Makes sure the message is not sent to the stream where the message came from
