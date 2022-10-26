@@ -71,9 +71,23 @@ func (s *server) updateLamport(clientClock int32) int32 {
 */
 func (s *server) Chat(srv gRPC.Chat_ChatServer) error {
 
+	//We get a joining request always when a new person join the chat
+	//which we send to all the chat members
+	joiningRequest, err := srv.Recv()
+	//Update time: receive join message
+	s.clock = s.updateLamport(joiningRequest.Time)
+	log.Println("Receive join message (server): ", s.clock)
+	if err != nil {
+		log.Printf("Receiving error: %v", err)
+	}
+
 	userId := uuid.Must(uuid.NewRandom()).String() //Generating a random ID for a user
 
-	s.addClient(userId, srv)     //Adding user to the server
+	s.addClient(userId, srv) //Adding user to the server
+	//Update time: add client
+	s.clock = s.updateLamport(joiningRequest.Time)
+	log.Println("Adding client clock: ", s.clock)
+	log.Printf("%s at Lamport time %v: %s", joiningRequest.Name, s.clock, userId)
 	defer s.removeClient(userId) //removing client at the end of the function
 
 	/*
@@ -87,16 +101,9 @@ func (s *server) Chat(srv gRPC.Chat_ChatServer) error {
 		}
 	}() //"defer function must be in a function call - what is this syntax?
 
-	//We get a joining request always when a new person join the chat
-	//which we send to all the chat members
-	joiningRequest, err := srv.Recv()
-	if err != nil {
-		log.Printf("Receiving error: %v", err)
-	}
-
-	s.clock = s.updateLamport(joiningRequest.Time)
-	log.Printf("%s at Lamport time %v: %s", joiningRequest.Name, s.clock, userId)
-
+	//Update time: Broadcast adding client
+	s.clock = s.updateLamport(s.clock)
+	log.Println("Broadcasting adding client clock: ", s.clock)
 	for _, server := range s.getClients() {
 		if err := server.Send(&gRPC.BroadcastResponse{Name: joiningRequest.Name, Message: joiningRequest.Message, Time: s.clock}); err != nil {
 			log.Printf("Broadcasting error: %v", err)
@@ -107,16 +114,18 @@ func (s *server) Chat(srv gRPC.Chat_ChatServer) error {
 		This function is continiously checking for messages
 	*/
 	for {
-		response, err := srv.Recv()
 
+		response, err := srv.Recv()
+		//Update time: receive message
+		s.clock = s.updateLamport(response.Time)
 		if err != nil {
 			log.Printf("Receiving error: %v", err)
 			break
 		}
-		s.clock = s.updateLamport(joiningRequest.Time)
 
 		log.Printf("broadcast at Lamport time %v: Message from %s : %s", s.clock, response.Name, response.Message)
-		s.clock = s.updateLamport(response.Time)
+		//Update time: broadcast message
+		s.clock = s.updateLamport(s.clock)
 
 		for _, server := range s.getClients() {
 

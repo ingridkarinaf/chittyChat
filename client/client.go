@@ -42,6 +42,8 @@ func main() {
 		log.Fatal(err)
 	}
 	joiningMessage := "joined ChittyChat"
+	clock = updateLamport(clock)
+	log.Println("joinChat clock: ", clock)
 	stream.SendMsg(&gRPC.BroadcastRequest{Name: clientName, Message: joiningMessage, Time: int32(clock)})
 
 	//Creating a thread with an infinite loop to keep sending messages/requests
@@ -70,6 +72,8 @@ func main() {
 			if err := stream.SendMsg(&gRPC.BroadcastRequest{Name: clientName, Message: message, Time: int32(clock)}); err != nil {
 				log.Fatal(err)
 			}
+			//Update time: send message
+			clock = updateLamport(clock)
 			log.Printf("Message sent")
 			//log.Printf("Sent message: %s", message)
 			waitTime := rand.Intn(5)
@@ -85,14 +89,16 @@ func main() {
 	//Infinite loop for receiving messages
 	for {
 		response, err := stream.Recv()
-		currentTime := updateLamport(response.Time)
+		//Update time: receive message
+		clock = updateLamport(response.Time)
+		log.Println("Receive message clock: ", clock)
 		if err != nil {
 			log.Fatal(err)
 		}
 		if response.Message == joiningMessage {
-			log.Printf("%s %s at Lamport time %v", response.Name, response.Message, currentTime)
+			log.Printf("%s %s at Lamport time %v", response.Name, response.Message, clock)
 		} else {
-			log.Printf("Message from %s at Lamport time %v: %s", response.Name, currentTime, response.Message)
+			log.Printf("Message from %s at Lamport time %v: %s", response.Name, clock, response.Message)
 			//log.Printf("Received message from %s", response.Message)
 		}
 
