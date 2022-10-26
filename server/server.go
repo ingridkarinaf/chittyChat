@@ -125,7 +125,8 @@ func (s *server) Chat(srv gRPC.Chat_ChatServer) error {
 		This function is continiously checking for messages
 	*/
 	for {
-		log.Println()
+
+		//Error happens here because there is nothing to receive
 		response, err := srv.Recv()
 		if err != nil {
 			log.Printf("Receiving error: %v", err)
@@ -142,7 +143,6 @@ func (s *server) Chat(srv gRPC.Chat_ChatServer) error {
 				}
 	
 			}
-			log.Println("inside if statement")
 			continue
 		}
 		//Update time: receive message
