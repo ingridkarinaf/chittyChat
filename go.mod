@@ -3,7 +3,6 @@ module ChittyChat2.0
 go 1.19
 
 require (
-	github.com/google/uuid v1.1.2
 	google.golang.org/grpc v1.50.1
 	google.golang.org/protobuf v1.28.1
 )
