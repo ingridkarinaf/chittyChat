@@ -42,3 +42,4 @@ Here is the same scenario acted out when running the program:
 <!-- - Include system logs, that document the requirements are met, in the appendix of
 your report -->
 
+HelloHello. We have some inconsistace in our leaving Lamport time. We need to discuss how to make it consistance. Also when someone leaves there is a weird error printed at the server log. 

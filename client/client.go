@@ -23,8 +23,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("Unable to connect: %v", err)
 	}
-	
-
 
 	client := gRPC.NewChatClient(connection) //creates a new client
 	clientName := os.Args[1]                 //takes a name from the terminal
@@ -53,7 +51,7 @@ func main() {
 	// 		os.Exit(1)
 	// 	}
 	// 	fmt.Println("end of function")
-	// }() 
+	// }()
 
 	defer connection.Close() //closes connection at the end of the function
 	joiningMessage := "joined ChittyChat"
@@ -69,7 +67,7 @@ func main() {
 			scanner.Scan()
 			// Holds the string that was scanned
 			text := scanner.Text()
-			if text=="exit" {
+			if text == "exit" {
 				exit = true
 				clock = updateLamport(clock)
 				stream.SendMsg(&gRPC.BroadcastRequest{Name: clientName, Message: text, Time: int32(clock)})
@@ -109,22 +107,21 @@ func main() {
 
 	}()
 	//Infinite loop for receiving messages
-	for (!exit) {
+	for !exit {
 		response, err := stream.Recv()
 		if err != nil {
 			log.Fatal(err)
 		}
 		//Update time: receive message
 		clock = updateLamport(response.Time)
-		log.Println("Receive message clock: ", clock)
-		
+		log.Println("Receive message at Lamport time: ", clock)
+
 		if response.Message == joiningMessage {
 			log.Printf("%s %s at Lamport time %v", response.Name, response.Message, clock)
 		} else {
 			log.Printf("Message from %s at Lamport time %v: %s", response.Name, clock, response.Message)
-			//log.Printf("Received message from %s", response.Message)
+
 		}
-		
 
 	}
 

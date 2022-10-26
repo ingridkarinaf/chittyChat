@@ -1,11 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net"
 	"os"
 	"sync"
-	"fmt"
 
 	gRPC "ChittyChat2.0/chat"
 	"google.golang.org/grpc"
@@ -24,32 +24,15 @@ type server struct {
 */
 func (s *server) addClient(clientName string, srv gRPC.Chat_ChatServer) {
 	s.mu.Lock()
-	defer s.mu.Unlock()     //Unlocks at the end of the function
+	defer s.mu.Unlock()         //Unlocks at the end of the function
 	s.clients[clientName] = srv //Adds the server of the chat client to the list of clients
 }
 
 func (s *server) removeClient(clientName string) {
 	s.mu.Lock()
-
-	clientToBeDeleted := s.clients["clientName"]
-	_, err := clientToBeDeleted.Recv()
-	if err != nil {
-		log.Fatal(err)
-	}
-	// //Updating lamport for removing a client
-	// s.clock = s.updateLamport(resp.Time) //finish
-
-	// //Broadcasting that client has left
-	// s.clock = s.updateLamport(s.clock) //finish
-	// leavingMsg:= clientName + " is leaving chat at Lamport time " + fmt.Sprint(s.clock)
-	// for _, server := range s.getClients() {
-	// 	if err := server.Send(&gRPC.BroadcastResponse{Name: clientName, Message: leavingMsg, Time: s.clock}); err != nil {
-	// 		log.Printf("Broadcasting error: %v", err)
-	// 	}
-	// }
 	defer s.mu.Unlock()
 	delete(s.clients, clientName)
-	log.Printf("%s left the chat", clientName)
+	log.Printf("%s left the chat at Lamport time %v", clientName, s.clock)
 }
 
 func (s *server) getClients() []gRPC.Chat_ChatServer {
@@ -96,21 +79,21 @@ func (s *server) Chat(srv gRPC.Chat_ChatServer) error {
 	//Update time: receive join message
 	s.clock = s.updateLamport(joiningRequest.Time)
 	log.Println("Receive join message (server): ", s.clock)
-	
-	clientName := joiningRequest.Name 
+
+	clientName := joiningRequest.Name
 	s.addClient(clientName, srv) //Adding user to the server
 	//Update time: add client
 	s.clock = s.updateLamport(joiningRequest.Time)
 	log.Println("Adding client clock: ", s.clock)
-	log.Printf("%s at Lamport time %v: %s", joiningRequest.Name, s.clock, clientName)
-	defer s.removeClient(clientName) 
+
+	defer s.removeClient(clientName)
 
 	defer func() {
 		if err := recover(); err != nil {
 			log.Printf("panic: %v", err)
 			os.Exit(1)
 		}
-	}() 
+	}()
 
 	//Update time: Broadcast adding client message
 	s.clock = s.updateLamport(s.clock)
@@ -133,15 +116,20 @@ func (s *server) Chat(srv gRPC.Chat_ChatServer) error {
 			break
 		}
 
-		if response.Message=="exit" {
+		if response.Message == "exit" {
+			//Update Lamport time: receive leave message
 			s.clock = s.updateLamport(response.Time)
+			log.Println("Server received leaving message at Lamport time: ", s.clock)
 			leavingMessage := response.Name + " left the chat at Lamport time " + fmt.Sprint(s.clock)
+			//Update Lamport time: broadcast Lamport time
+			s.clock = s.updateLamport(s.clock)
+			log.Println("Server broadcasted the message at Lamport time: ", s.clock)
 			for _, server := range s.getClients() {
 				//Using server to send broadcasting messages to all clients
 				if err := server.Send(&gRPC.BroadcastResponse{Name: response.Name, Message: leavingMessage, Time: s.clock}); err != nil {
 					log.Printf("Broadcasting error: %v", err)
 				}
-	
+
 			}
 			continue
 		}
@@ -175,7 +163,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
-
 
 	s := grpc.NewServer()               //rename s when understanding where the &server is coming from
 	gRPC.RegisterChatServer(s, &server{ //where is the "server" coming from?
