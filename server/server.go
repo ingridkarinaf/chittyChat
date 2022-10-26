@@ -1,13 +1,13 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net"
 	"os"
 	"sync"
 
 	gRPC "ChittyChat2.0/chat"
-	"github.com/google/uuid"
 	"google.golang.org/grpc"
 )
 
@@ -22,18 +22,17 @@ type server struct {
 - Chat_ChatServer is a server interface for sending and receiving broadcast messages
 - So here we have a server srv of type Chat_ChatServer
 */
-func (s *server) addClient(userId string, srv gRPC.Chat_ChatServer) {
+func (s *server) addClient(clientName string, srv gRPC.Chat_ChatServer) {
 	s.mu.Lock()
-	defer s.mu.Unlock()     //Unlocks at the end of the function
-	s.clients[userId] = srv //Adds the server of the chat client to the list of clients
+	defer s.mu.Unlock()         //Unlocks at the end of the function
+	s.clients[clientName] = srv //Adds the server of the chat client to the list of clients
 }
 
-func (s *server) removeClient(userId string) {
-
+func (s *server) removeClient(clientName string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	delete(s.clients, userId)
-	log.Printf("Client left the chat")
+	delete(s.clients, clientName)
+	log.Printf("%s left the chat at Lamport time %v", clientName, s.clock)
 }
 
 func (s *server) getClients() []gRPC.Chat_ChatServer {
@@ -74,32 +73,27 @@ func (s *server) Chat(srv gRPC.Chat_ChatServer) error {
 	//We get a joining request always when a new person join the chat
 	//which we send to all the chat members
 	joiningRequest, err := srv.Recv()
-	//Update time: receive join message
-	s.clock = s.updateLamport(joiningRequest.Time)
-	log.Println("Receive join message (server): ", s.clock)
 	if err != nil {
 		log.Printf("Receiving error: %v", err)
 	}
+	//Update time: receive join message
+	s.clock = s.updateLamport(joiningRequest.Time)
+	log.Println("Receive join message (server): ", s.clock)
 
-	userId := uuid.Must(uuid.NewRandom()).String() //Generating a random ID for a user
-
-	s.addClient(userId, srv) //Adding user to the server
+	clientName := joiningRequest.Name
+	s.addClient(clientName, srv) //Adding user to the server
 	//Update time: add client
 	s.clock = s.updateLamport(joiningRequest.Time)
 	log.Println("Adding client clock: ", s.clock)
-	log.Printf("%s at Lamport time %v: %s", joiningRequest.Name, s.clock, userId)
-	defer s.removeClient(userId) //removing client at the end of the function
 
-	/*
-		- Executing at the end of the function
-		- ?? Does it exit if there's an error, or what is this for?
-	*/
+	defer s.removeClient(clientName)
+
 	defer func() {
 		if err := recover(); err != nil {
 			log.Printf("panic: %v", err)
 			os.Exit(1)
 		}
-	}() //"defer function must be in a function call - what is this syntax?
+	}()
 
 	//Update time: Broadcast adding client message
 	s.clock = s.updateLamport(s.clock)
@@ -115,16 +109,33 @@ func (s *server) Chat(srv gRPC.Chat_ChatServer) error {
 	*/
 	for {
 
+		//Error happens here because there is nothing to receive
 		response, err := srv.Recv()
 		if err != nil {
 			log.Printf("Receiving error: %v", err)
 			break
 		}
+
+		if response.Message == "exit" {
+			//Update Lamport time: receive leave message
+			s.clock = s.updateLamport(response.Time)
+			log.Println("Server received leaving message at Lamport time: ", s.clock)
+			leavingMessage := response.Name + " left the chat at Lamport time " + fmt.Sprint(s.clock)
+			//Update Lamport time: broadcast Lamport time
+			s.clock = s.updateLamport(s.clock)
+			log.Println("Server broadcasted the message at Lamport time: ", s.clock)
+			for _, server := range s.getClients() {
+				//Using server to send broadcasting messages to all clients
+				if err := server.Send(&gRPC.BroadcastResponse{Name: response.Name, Message: leavingMessage, Time: s.clock}); err != nil {
+					log.Printf("Broadcasting error: %v", err)
+				}
+
+			}
+			continue
+		}
 		//Update time: receive message
 		s.clock = s.updateLamport(response.Time)
 		log.Printf("Receive message at Lamport time %v: Message from %s : %s", s.clock, response.Name, response.Message)
-
-		
 
 		//Update time: broadcast message
 		s.clock = s.updateLamport(s.clock)
@@ -147,22 +158,12 @@ func (s *server) Chat(srv gRPC.Chat_ChatServer) error {
 
 func main() {
 	//Establishing a connection
-	/*
-		- How come it is listening to the port before creating a server?
-		- Isn't it the server that is listening to the port?
-		- Although in the client, the main function established the connection,
-		and then creates multiple clients
-	*/
 	port := ":9080"
 	lis, err := net.Listen("tcp", port)
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
 
-	/*
-		- Here they register with the clients inside, whereas in another example (suvi's) they don't.
-		-
-	*/
 	s := grpc.NewServer()               //rename s when understanding where the &server is coming from
 	gRPC.RegisterChatServer(s, &server{ //where is the "server" coming from?
 		clients: make(map[string]gRPC.Chat_ChatServer), //making a map of clients
