@@ -95,6 +95,7 @@ func main() {
 		clock = updateLamport(response.Time)
 		log.Println("Receive message clock: ", clock)
 		if err != nil {
+			log.Println("erororororo")
 			log.Fatal(err)
 		}
 		if response.Message == joiningMessage {
