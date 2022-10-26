@@ -23,7 +23,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("Unable to connect: %v", err)
 	}
-	defer connection.Close() //closes connection at the end of the function
+	
+
 
 	client := gRPC.NewChatClient(connection) //creates a new client
 	clientName := os.Args[1]                 //takes a name from the terminal
@@ -39,22 +40,41 @@ func main() {
 	//Calling *THE SERVICE* from PB file, which returns a stream
 	stream, err := client.Chat(cont)
 	if err != nil {
-		log.Println("erroroorororo")
 		log.Fatal(err)
 	}
+
+	//Happens when the client exits the chat
+	// defer func() {
+	// 	fmt.Println("firing defer function")
+	// 	clock = updateLamport(clock)
+	// 	stream.SendMsg(&gRPC.BroadcastRequest{Time: int32(clock)})
+	// 	if err := recover(); err != nil {
+	// 		log.Printf("panic: %v", err)
+	// 		os.Exit(1)
+	// 	}
+	// 	fmt.Println("end of function")
+	// }() 
+
+	defer connection.Close() //closes connection at the end of the function
 	joiningMessage := "joined ChittyChat"
 	clock = updateLamport(clock)
 	log.Println("joinChat clock: ", clock)
 	stream.SendMsg(&gRPC.BroadcastRequest{Name: clientName, Message: joiningMessage, Time: int32(clock)})
 
 	//Creating a thread with an infinite loop to keep sending messages/requests
+	exit := false
 	go func() {
 		scanner := bufio.NewScanner(os.Stdin)
 		for {
 			scanner.Scan()
 			// Holds the string that was scanned
 			text := scanner.Text()
-			if len(text) != 0 && len(text) < 128 {
+			if text=="exit" {
+				exit = true
+				clock = updateLamport(clock)
+				stream.SendMsg(&gRPC.BroadcastRequest{Name: clientName, Message: text, Time: int32(clock)})
+				break
+			} else if len(text) != 0 && len(text) < 128 {
 				log.Println("if statement true")
 				fmt.Println(text)
 			} else {
@@ -89,21 +109,22 @@ func main() {
 
 	}()
 	//Infinite loop for receiving messages
-	for {
+	for (!exit) {
 		response, err := stream.Recv()
+		if err != nil {
+			log.Fatal(err)
+		}
 		//Update time: receive message
 		clock = updateLamport(response.Time)
 		log.Println("Receive message clock: ", clock)
-		if err != nil {
-			log.Println("erororororo")
-			log.Fatal(err)
-		}
+		
 		if response.Message == joiningMessage {
 			log.Printf("%s %s at Lamport time %v", response.Name, response.Message, clock)
 		} else {
 			log.Printf("Message from %s at Lamport time %v: %s", response.Name, clock, response.Message)
 			//log.Printf("Received message from %s", response.Message)
 		}
+		
 
 	}
 
