@@ -37,7 +37,7 @@ As each of these events are happening, the relevant node will compare their own 
 <!-- - Provide a diagram, that traces a sequence of RPC calls together with the Lamport
 timestamps, that corresponds to a chosen sequence of interactions: Client X joins, Client X Publishes, ..., Client X leaves. Include documentation (system logs) in your appendix. -->
 The following is a diagram depicting a scenario of a series of RPC calls between two clients and a server.
-![Diagram of an RPC call sequence scenario](https://github.com/ingridkarinaf/chittyChat/chatScenario.png)
+![Diagram of an RPC call sequence scenario](https://github.com/ingridkarinaf/chittyChat/blob/main/Demonstrating_lamport_time/Scenario.png)
 
 Here is the same scenario acted out when running the program: 
 
