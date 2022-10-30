@@ -18,7 +18,7 @@ We're using a server-client architecture, along with bidirectional streaming, in
 
 ### RPC Methods
 <!-- Describe what RPC methods are implemented, of what type, and what messages types are used for communication -->
-We have a `Chat` rpc method which has messages `broadcastRequest` and `broadcastResponse`. The client is able to sent a join request, send messages for other members and leave the chat by typing "exit" within the Chat method. 
+We have a `Chat` rpc method of type **stream** which has messages `broadcastRequest` and `broadcastResponse`. The client is able to sent a join request, send messages for other members and leave the chat by typing "exit" within the Chat method. 
 
 ### Lamport Timestamp Implementation
 <!-- - Describe how you have implemented the calculation of the Lamport timestamps -->
@@ -31,15 +31,12 @@ The following are considered events that increments the Lamport timestamp (each 
 - Broadcasting, i.e. sending messages to all clients (server)
 - Leave chat (client)
 
-
 As each of these events are happening, the relevant node will compare their own clock with the node it communicates with, take the max, increment the max value by 1, and assign the value to its own clock. 
 
 <!-- - Provide a diagram, that traces a sequence of RPC calls together with the Lamport
 timestamps, that corresponds to a chosen sequence of interactions: Client X joins, Client X Publishes, ..., Client X leaves. Include documentation (system logs) in your appendix. -->
-The following is a diagram depicting a scenario of a series of RPC calls between two clients and a server.
-![Diagram of an RPC call sequence scenario](https://github.com/ingridkarinaf/chittyChat/blob/main/Demonstrating_lamport_time/Scenario.png)
-
-Here is the same scenario acted out when running the program: 
+Go to link below for lamport time demo (diagram and terminal outputs):
+https://github.com/ingridkarinaf/chittyChat/tree/main/Demonstrating_lamport_time
 
 <!-- - Provide a link to a Git repo with your source code in the report -->
 <!-- - Include system logs, that document the requirements are met, in the appendix of
