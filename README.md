@@ -18,16 +18,19 @@ We're using a server-client architecture, along with bidirectional streaming, in
 
 ### RPC Methods
 <!-- Describe what RPC methods are implemented, of what type, and what messages types are used for communication -->
+We have a `Chat` rpc method which has messages `broadcastRequest` and `broadcastResponse`. The client is able to sent a join request, send messages for other members and leave the chat by typing "exit" within the Chat method. 
 
 ### Lamport Timestamp Implementation
 <!-- - Describe how you have implemented the calculation of the Lamport timestamps -->
 The following are considered events that increments the Lamport timestamp (each increments by 1): 
 - Join chat (client)
 - Adding a client (server)
+- Removing a client (server)
 - Sending a message (client and server)
 - Receiving a message (client and server)
 - Broadcasting, i.e. sending messages to all clients (server)
 - Leave chat (client)
+
 
 As each of these events are happening, the relevant node will compare their own clock with the node it communicates with, take the max, increment the max value by 1, and assign the value to its own clock. 
 
@@ -42,4 +45,3 @@ Here is the same scenario acted out when running the program:
 <!-- - Include system logs, that document the requirements are met, in the appendix of
 your report -->
 
-HelloHello. We have some inconsistace in our leaving Lamport time. We need to discuss how to make it consistance. Also when someone leaves there is a weird error printed at the server log. 
