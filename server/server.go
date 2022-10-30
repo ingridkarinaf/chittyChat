@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net"
 	"os"
@@ -31,8 +30,10 @@ func (s *server) addClient(clientName string, srv gRPC.Chat_ChatServer) {
 func (s *server) removeClient(clientName string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
 	delete(s.clients, clientName)
-	log.Printf("%s left the chat at Lamport time %v", clientName, s.clock)
+
+	//log.Printf("%s left the chat at Lamport time %v", clientName, s.clock)
 }
 
 func (s *server) getClients() []gRPC.Chat_ChatServer {
@@ -84,7 +85,7 @@ func (s *server) Chat(srv gRPC.Chat_ChatServer) error {
 	s.addClient(clientName, srv) //Adding user to the server
 	//Update time: add client
 	s.clock = s.updateLamport(joiningRequest.Time)
-	log.Println("Adding client clock: ", s.clock)
+	log.Println("Adding client at Lamport time: ", s.clock)
 
 	defer s.removeClient(clientName)
 
@@ -120,7 +121,11 @@ func (s *server) Chat(srv gRPC.Chat_ChatServer) error {
 			//Update Lamport time: receive leave message
 			s.clock = s.updateLamport(response.Time)
 			log.Println("Server received leaving message at Lamport time: ", s.clock)
-			leavingMessage := response.Name + " left the chat at Lamport time " + fmt.Sprint(s.clock)
+			//Server logs client removed and updated lamport time
+			s.clock = s.updateLamport(response.Time)
+			log.Println("Server removes client at Lamport time: ", s.clock)
+
+			leavingMessage := response.Name + " is leaving the chat"
 			//Update Lamport time: broadcast Lamport time
 			s.clock = s.updateLamport(s.clock)
 			log.Println("Server broadcasted the message at Lamport time: ", s.clock)
@@ -131,9 +136,10 @@ func (s *server) Chat(srv gRPC.Chat_ChatServer) error {
 				}
 
 			}
+
 			continue
 		}
-		//Update time: receive message
+
 		s.clock = s.updateLamport(response.Time)
 		log.Printf("Receive message at Lamport time %v: Message from %s : %s", s.clock, response.Name, response.Message)
 

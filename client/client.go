@@ -114,7 +114,6 @@ func main() {
 		}
 		//Update time: receive message
 		clock = updateLamport(response.Time)
-		log.Println("Receive message at Lamport time: ", clock)
 
 		if response.Message == joiningMessage {
 			log.Printf("%s %s at Lamport time %v", response.Name, response.Message, clock)
